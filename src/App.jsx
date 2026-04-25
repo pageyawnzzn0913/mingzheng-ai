@@ -199,7 +199,7 @@ function HomeQRCodeCard() {
   return (
     <Card>
       <div className="flex items-center gap-2 text-sm font-bold text-slate-700">
-        <Icon type="qr" size={18} /> 扫码体验
+        <Icon type="qr" size={18} /> 真实二维码
       </div>
       <div className="mt-4 flex flex-col items-center">
         <img
@@ -207,7 +207,7 @@ function HomeQRCodeCard() {
           alt="明证 AI 手机演示二维码"
           className="h-44 w-44 rounded-2xl border border-slate-200 bg-white p-2 shadow-sm"
         />
-        <p className="mt-3 text-center text-sm font-bold text-slate-900">手机扫码打开 Demo</p>
+        <p className="mt-3 text-center text-sm font-bold text-slate-900">手机扫码直接打开 Demo</p>
         <p className="mt-1 break-all rounded-2xl bg-slate-50 p-3 text-center text-xs font-semibold text-blue-700">
           https://mingzheng-ai.vercel.app
         </p>
@@ -368,7 +368,6 @@ export default function App() {
   const [userRole, setUserRole] = useState("普通用户");
   const [commentType, setCommentType] = useState("普通评论");
   const [aiDemo, setAiDemo] = useState(false);
-  const [showQR, setShowQR] = useState(false);
 
   const uploadFiles = (e, setter) => {
     if (!isLoggedIn) {
@@ -576,51 +575,6 @@ export default function App() {
             </div>
           </div>
         )}
-
-        {showQR && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 px-6">
-            <div className="w-full max-w-[360px] rounded-[30px] bg-white p-5 shadow-xl">
-              <div className="flex items-center gap-3">
-                <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-slate-900 text-white"><Icon type="qr" /></div>
-                <div>
-                  <h2 className="text-xl font-black">扫码即用</h2>
-                  <p className="text-sm text-slate-500">手机打开这个链接即可体验 Demo</p>
-                </div>
-              </div>
-
-              <div className="mt-5 rounded-[24px] bg-slate-50 p-4 text-center">
-                <div className="mx-auto grid h-44 w-44 grid-cols-5 gap-1 rounded-2xl bg-white p-3 shadow-sm">
-                  {Array.from({ length: 25 }).map((_, i) => (
-                    <div
-                      key={i}
-                      className={`rounded-sm ${
-                        [0,1,2,5,7,10,11,12,4,9,14,20,21,22,15,17,24,3,8,13,18,23].includes(i)
-                          ? "bg-slate-900"
-                          : "bg-slate-200"
-                      }`}
-                    />
-                  ))}
-                </div>
-                <p className="mt-3 text-xs text-slate-400">演示二维码占位图：正式比赛请使用你已生成的二维码图片。</p>
-              </div>
-
-              <div className="mt-4 rounded-2xl bg-blue-50 p-3 text-xs font-bold text-blue-700 break-all">
-                https://mingzheng-ai.vercel.app
-              </div>
-
-              <a
-                href="https://mingzheng-ai.vercel.app"
-                target="_blank"
-                rel="noreferrer"
-                className="mt-4 block w-full rounded-2xl bg-blue-600 py-3 text-center font-bold text-white"
-              >
-                打开演示链接
-              </a>
-              <button onClick={() => setShowQR(false)} className="mt-2 w-full rounded-2xl bg-slate-100 py-3 font-bold text-slate-600">关闭</button>
-            </div>
-          </div>
-        )}
-
         <main className="space-y-4 p-4">
           {selectedPost && (
             <DetailView post={selectedPost} onBack={() => setSelectedPost(null)} onDelete={() => deleteUserPost(selectedPost.type, selectedPost.index)} onSupport={() => selectedPost.type === "help" && support(selectedPost.index)} comments={comments[getPostKey(selectedPost.type, selectedPost.item, selectedPost.index)] || []} commentText={commentText} commentType={commentType} onCommentInput={setCommentText} onCommentTypeInput={setCommentType} onAddComment={addComment} onDeleteComment={deleteComment} currentUserName={loginName || "当前用户"} isLoggedIn={isLoggedIn} requireLogin={requireLogin} />
@@ -636,7 +590,6 @@ export default function App() {
                   <button onClick={() => setTab("truth")} className="mt-5 w-full rounded-2xl bg-white py-3 font-bold text-slate-900">立即上传求真</button>
                 </Card>
                 <AIEnhanceCard onStart={() => setAiDemo(true)} />
-                <QRDemoCard onOpen={() => setShowQR(true)} />
                 <HomeQRCodeCard />
                 <div className="grid grid-cols-3 gap-3">
                   <Card><div className="text-2xl font-black">{records.length}</div><div className="text-xs text-slate-500">求真帖子</div></Card>
