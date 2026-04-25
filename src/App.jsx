@@ -1,5 +1,7 @@
 import React, { useState } from "react";
 
+const HOME_QR_CODE = "data:image/png;base64,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";
+
 function Icon({ type, size = 22 }) {
   const common = { width: size, height: size, viewBox: "0 0 24 24", fill: "none", stroke: "currentColor", strokeWidth: 2, strokeLinecap: "round", strokeLinejoin: "round" };
   const paths = {
@@ -189,6 +191,28 @@ function QRDemoCard({ onOpen }) {
         <div className="mt-4 rounded-2xl bg-slate-900 py-3 text-center text-sm font-bold text-white">打开二维码 / 链接</div>
       </Card>
     </button>
+  );
+}
+
+
+function HomeQRCodeCard() {
+  return (
+    <Card>
+      <div className="flex items-center gap-2 text-sm font-bold text-slate-700">
+        <Icon type="qr" size={18} /> 扫码体验
+      </div>
+      <div className="mt-4 flex flex-col items-center">
+        <img
+          src={HOME_QR_CODE}
+          alt="明证 AI 手机演示二维码"
+          className="h-44 w-44 rounded-2xl border border-slate-200 bg-white p-2 shadow-sm"
+        />
+        <p className="mt-3 text-center text-sm font-bold text-slate-900">手机扫码打开 Demo</p>
+        <p className="mt-1 break-all rounded-2xl bg-slate-50 p-3 text-center text-xs font-semibold text-blue-700">
+          https://mingzheng-ai.vercel.app
+        </p>
+      </div>
+    </Card>
   );
 }
 
@@ -613,6 +637,7 @@ export default function App() {
                 </Card>
                 <AIEnhanceCard onStart={() => setAiDemo(true)} />
                 <QRDemoCard onOpen={() => setShowQR(true)} />
+                <HomeQRCodeCard />
                 <div className="grid grid-cols-3 gap-3">
                   <Card><div className="text-2xl font-black">{records.length}</div><div className="text-xs text-slate-500">求真帖子</div></Card>
                   <Card><div className="text-2xl font-black">{notices.length}</div><div className="text-xs text-slate-500">通报帖子</div></Card>
