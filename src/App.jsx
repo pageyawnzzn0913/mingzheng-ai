@@ -199,7 +199,7 @@ function HomeQRCodeCard() {
   );
 }
 
-function DetailView({ post, onBack, onDelete, onSupport, onAdvanceReview, onAddTruthEvidence, truthEvidenceFiles, onTruthEvidenceFiles, truthEvidenceNote, onTruthEvidenceNote, comments, commentText, commentType, onCommentInput, onCommentTypeInput, onAddComment, onDeleteComment, currentUserName, isLoggedIn, requireLogin }) {
+function DetailView({ post, onBack, onDelete, onSupport, onAdvanceReview, onAddTruthEvidence, truthEvidenceFiles, onTruthEvidenceFiles, truthEvidenceNote, onTruthEvidenceNote, comments, commentText, commentType, onCommentInput, onCommentTypeInput, onAddComment, onDeleteComment, currentUserName, currentUserRole, isLoggedIn, requireLogin }) {
   const { type, item } = post;
   const isTruth = type === "truth";
   const isNotice = type === "notice";
@@ -222,6 +222,15 @@ function DetailView({ post, onBack, onDelete, onSupport, onAdvanceReview, onAddT
         <Pill type={badgeType}>{badge}</Pill>
         <h2 className="mt-4 text-2xl font-black leading-snug">{title}</h2>
         <div className="mt-3"><ScoreBar score={score} /></div>
+        {isLoggedIn && (
+          <div className="mt-4 rounded-2xl bg-slate-50 p-3 text-xs leading-5 text-slate-600">
+            当前身份：<b className="text-slate-900">{currentUserRole}</b>
+            {currentUserRole === "普通用户" && " · 可浏览、评论、提交求真、支持求助"}
+            {currentUserRole === "已认证用户" && " · 可补充证据、发起求助、录入通报"}
+            {currentUserRole === "志愿核验者" && " · 可发表核验评论、推进审核流程"}
+            {currentUserRole === "专业人士" && " · 可发布最终真伪结论"}
+          </div>
+        )}
 
         {isTruth && (
           <div className="mt-5 space-y-3 text-sm leading-6 text-slate-600">
@@ -241,7 +250,7 @@ function DetailView({ post, onBack, onDelete, onSupport, onAdvanceReview, onAddT
                 ))}
               </div>
               <button onClick={isLoggedIn ? onAdvanceReview : requireLogin} className="mt-4 w-full rounded-2xl bg-blue-600 py-3 font-bold text-white">
-                {isLoggedIn ? "推进一次审核流程" : "登录后推进审核"}
+                {isLoggedIn ? "推进审核（核验者以上）" : "登录后推进审核"}
               </button>
             </div>
 
@@ -264,7 +273,7 @@ function DetailView({ post, onBack, onDelete, onSupport, onAdvanceReview, onAddT
                 </div>
               )}
               <button onClick={isLoggedIn ? onAddTruthEvidence : requireLogin} className="mt-3 w-full rounded-2xl bg-emerald-600 py-3 font-bold text-white">
-                {isLoggedIn ? "提交补充证据" : "登录后提交证据"}
+                {isLoggedIn ? "提交补充证据（认证用户以上）" : "登录后提交证据"}
               </button>
             </div>
 
@@ -448,6 +457,34 @@ export default function App() {
     setLoginPassword("");
   }
 
+  function hasRolePermission(action) {
+    const levelMap = {
+      "普通用户": 1,
+      "已认证用户": 2,
+      "志愿核验者": 3,
+      "专业人士": 4,
+    };
+
+    const requiredMap = {
+      submitTruth: 1,
+      comment: 1,
+      support: 1,
+      submitHelp: 2,
+      submitNotice: 2,
+      addEvidence: 2,
+      review: 3,
+      finalConclusion: 4,
+      deleteOwn: 1,
+    };
+
+    return (levelMap[userRole] || 1) >= (requiredMap[action] || 1);
+  }
+
+  function denyPermission(message) {
+    alert(message || "当前账号权限不足，请切换更高权限角色后再操作。");
+    return false;
+  }
+
   function submitTruth() {
     if (!isLoggedIn) return requireLogin();
     if (!truthText && !truthLink && truthFiles.length === 0) return alert("请先输入或上传内容");
@@ -475,10 +512,12 @@ export default function App() {
 
   function advanceTruthReview() {
     if (!selectedPost || selectedPost.type !== "truth") return;
+    if (!hasRolePermission("review")) return denyPermission("只有志愿核验者或专业人士可以推进审核流程。");
 
     const steps = ["待提交", "AI 初筛中", "证据补充中", "人工复核中", "结论已发布"];
     const currentStep = selectedPost.item.reviewStep || 1;
     const nextStep = Math.min(currentStep + 1, 4);
+    if (nextStep >= 4 && !hasRolePermission("finalConclusion")) return denyPermission("只有专业人士可以发布最终真伪结论。");
     const nextStatus = steps[nextStep];
 
     const nextResult =
@@ -505,6 +544,7 @@ export default function App() {
 
   function addTruthEvidence() {
     if (!isLoggedIn) return requireLogin();
+    if (!hasRolePermission("addEvidence")) return denyPermission("只有已认证用户、志愿核验者或专业人士可以补充证据。");
     if (!selectedPost || selectedPost.type !== "truth") return;
     if (truthEvidenceFiles.length === 0 && !truthEvidenceNote.trim()) return alert("请先上传证据或填写证据说明");
 
@@ -537,6 +577,7 @@ export default function App() {
 
   function submitNotice() {
     if (!isLoggedIn) return requireLogin();
+    if (!hasRolePermission("submitNotice")) return denyPermission("只有已认证用户、志愿核验者或专业人士可以录入官方通报。");
     if (!noticeTitle && !noticeSummary) return alert("请填写通报内容");
 
     const hasTrustedSource = noticeSourceUrl.trim() || noticeSourceTitle.trim() || noticeSourceDesc.trim();
@@ -572,6 +613,7 @@ export default function App() {
 
   function submitHelp() {
     if (!isLoggedIn) return requireLogin();
+    if (!hasRolePermission("submitHelp")) return denyPermission("只有已认证用户、志愿核验者或专业人士可以发起求助。");
     if (!helpName && !helpDesc) return alert("请填写求助信息");
 
     const evidenceCount = helpEvidenceFiles.length;
@@ -616,6 +658,7 @@ export default function App() {
 
   function addComment() {
     if (!isLoggedIn) return requireLogin();
+    if (commentType === "核验评论" && !hasRolePermission("review")) return denyPermission("只有志愿核验者或专业人士可以发表核验评论。");
     if (!selectedPost || !commentText.trim()) return alert("请先输入评论内容");
     const key = getPostKey(selectedPost.type, selectedPost.item, selectedPost.index);
     const newComment = { user: loginName || "当前用户", role: userRole, type: commentType, text: commentText.trim(), time: new Date().toLocaleString() };
@@ -713,7 +756,7 @@ export default function App() {
 
         <main className="space-y-4 p-4">
           {selectedPost && (
-            <DetailView post={selectedPost} onBack={() => setSelectedPost(null)} onDelete={() => deleteUserPost(selectedPost.type, selectedPost.index)} onSupport={() => selectedPost.type === "help" && support(selectedPost.index)} onAdvanceReview={advanceTruthReview} onAddTruthEvidence={addTruthEvidence} truthEvidenceFiles={truthEvidenceFiles} onTruthEvidenceFiles={setTruthEvidenceFiles} truthEvidenceNote={truthEvidenceNote} onTruthEvidenceNote={setTruthEvidenceNote} comments={comments[getPostKey(selectedPost.type, selectedPost.item, selectedPost.index)] || []} commentText={commentText} commentType={commentType} onCommentInput={setCommentText} onCommentTypeInput={setCommentType} onAddComment={addComment} onDeleteComment={deleteComment} currentUserName={loginName || "当前用户"} isLoggedIn={isLoggedIn} requireLogin={requireLogin} />
+            <DetailView post={selectedPost} onBack={() => setSelectedPost(null)} onDelete={() => deleteUserPost(selectedPost.type, selectedPost.index)} onSupport={() => selectedPost.type === "help" && support(selectedPost.index)} onAdvanceReview={advanceTruthReview} onAddTruthEvidence={addTruthEvidence} truthEvidenceFiles={truthEvidenceFiles} onTruthEvidenceFiles={setTruthEvidenceFiles} truthEvidenceNote={truthEvidenceNote} onTruthEvidenceNote={setTruthEvidenceNote} comments={comments[getPostKey(selectedPost.type, selectedPost.item, selectedPost.index)] || []} commentText={commentText} commentType={commentType} onCommentInput={setCommentText} onCommentTypeInput={setCommentType} onAddComment={addComment} onDeleteComment={deleteComment} currentUserName={loginName || "当前用户"} currentUserRole={userRole} isLoggedIn={isLoggedIn} requireLogin={requireLogin} />
           )}
 
           {!selectedPost && (
@@ -726,6 +769,15 @@ export default function App() {
                   <button onClick={() => setTab("truth")} className="mt-5 w-full rounded-2xl bg-white py-3 font-bold text-slate-900">立即上传求真</button>
                 </Card>
                 <AIEnhanceCard onStart={() => setAiDemo(true)} />
+                <Card>
+                  <h2 className="text-lg font-black">分级权限体系</h2>
+                  <div className="mt-3 space-y-2 text-xs leading-5 text-slate-600">
+                    <div className="rounded-2xl bg-slate-50 p-3"><b className="text-slate-900">普通用户：</b>提交求真、普通评论、支持求助</div>
+                    <div className="rounded-2xl bg-blue-50 p-3"><b className="text-blue-700">已认证用户：</b>补充证据、发起求助、录入官方通报</div>
+                    <div className="rounded-2xl bg-emerald-50 p-3"><b className="text-emerald-700">志愿核验者：</b>发表核验评论、推进审核流程</div>
+                    <div className="rounded-2xl bg-violet-50 p-3"><b className="text-violet-700">专业人士：</b>发布最终真伪结论</div>
+                  </div>
+                </Card>
                 <HomeQRCodeCard />
                 <div className="grid grid-cols-3 gap-3">
                   <Card><div className="text-2xl font-black">{records.length}</div><div className="text-xs text-slate-500">求真帖子</div></Card>
@@ -773,7 +825,7 @@ export default function App() {
                     <input value={noticeSourceUrl} onChange={e => setNoticeSourceUrl(e.target.value)} placeholder="可信来源链接，例如 https://..." className="mt-3 w-full rounded-2xl border border-blue-100 bg-white p-3 text-sm outline-none" />
                     <textarea value={noticeSourceDesc} onChange={e => setNoticeSourceDesc(e.target.value)} placeholder="来源说明，例如：官方发布的事故调查报告，包含原因认定和处理结果" className="mt-3 h-20 w-full rounded-2xl border border-blue-100 bg-white p-3 text-sm outline-none"></textarea>
                   </div>
-                  <button onClick={submitNotice} className="mt-4 w-full rounded-2xl bg-blue-600 py-3 font-bold text-white">{isLoggedIn ? "添加通报" : "登录后添加通报"}</button>
+                  <button onClick={submitNotice} className="mt-4 w-full rounded-2xl bg-blue-600 py-3 font-bold text-white">{isLoggedIn ? "添加通报（认证用户以上）" : "登录后添加通报"}</button>
                 </Card>
                 {notices.map((n, i) => <button key={i} onClick={() => openPost("notice", n, i)} className="block w-full text-left"><Card><div className="flex items-start justify-between gap-3"><Pill type={n.tag === "用户上传" ? "amber" : "green"}>{n.tag}</Pill><Icon type="right" size={18} /></div><h3 className="mt-3 font-bold">{n.title}</h3><p className="mt-2 text-sm text-slate-500">{n.summary}</p><p className="mt-3 text-xs font-semibold text-blue-700">来源：{n.source || "用户上传材料"}</p>{n.isUserSubmitted && <button onClick={(e) => { e.stopPropagation(); deleteUserPost("notice", i); }} className="mt-3 rounded-xl bg-rose-50 px-3 py-2 text-xs font-bold text-rose-600">删除我的提交</button>}</Card></button>)}
               </>}
@@ -808,7 +860,7 @@ export default function App() {
                       </div>
                     )}
                   </div>
-                  <button onClick={submitHelp} className="mt-4 w-full rounded-2xl bg-blue-600 py-3 font-bold text-white">{isLoggedIn ? "提交求助" : "登录后提交求助"}</button>
+                  <button onClick={submitHelp} className="mt-4 w-full rounded-2xl bg-blue-600 py-3 font-bold text-white">{isLoggedIn ? "提交求助（认证用户以上）" : "登录后提交求助"}</button>
                 </Card>
                 {helps.map((h, i) => { const p = Math.min(100, Math.round(h.raised / h.target * 100)); return <button key={i} onClick={() => openPost("help", h, i)} className="block w-full text-left"><Card><div className="flex items-start justify-between gap-3"><Pill type={h.verified === "待审核" ? "amber" : "green"}>{h.verified}</Pill><Icon type="right" size={18} /></div><h3 className="mt-3 font-bold">{h.name}</h3><p className="mt-2 text-sm text-slate-500">{h.desc}</p><div className="mt-4 h-3 overflow-hidden rounded-full bg-slate-100"><div className="h-3 rounded-full bg-blue-600" style={{ width: `${p}%` }} /></div><div className="mt-2 flex justify-between text-sm text-slate-500"><span>¥{h.raised}</span><span>¥{h.target}</span></div><button onClick={(e) => { e.stopPropagation(); support(i); }} className="mt-4 w-full rounded-2xl bg-blue-600 py-3 font-bold text-white">模拟支持 +10 元</button>{h.isUserSubmitted && <button onClick={(e) => { e.stopPropagation(); deleteUserPost("help", i); }} className="mt-3 w-full rounded-2xl bg-rose-50 py-3 font-bold text-rose-600">删除我的提交</button>}</Card></button>; })}
               </>}
