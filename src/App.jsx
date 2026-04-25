@@ -176,30 +176,13 @@ function AIEnhanceCard({ onStart }) {
   );
 }
 
-function QRDemoCard({ onOpen }) {
-  return (
-    <button onClick={onOpen} className="block w-full text-left">
-      <Card>
-        <div className="flex items-start gap-3">
-          <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-slate-900 text-white"><Icon type="qr" size={20} /></div>
-          <div>
-            <h2 className="font-black">扫码即用</h2>
-            <p className="mt-1 text-sm leading-6 text-slate-500">点击查看演示入口，比赛现场评委手机扫码/复制链接即可体验。</p>
-            <p className="mt-2 rounded-2xl bg-slate-50 p-3 text-xs font-semibold text-blue-700">https://mingzheng-ai.vercel.app</p>
-          </div>
-        </div>
-        <div className="mt-4 rounded-2xl bg-slate-900 py-3 text-center text-sm font-bold text-white">打开二维码 / 链接</div>
-      </Card>
-    </button>
-  );
-}
 
 
 function HomeQRCodeCard() {
   return (
     <Card>
       <div className="flex items-center gap-2 text-sm font-bold text-slate-700">
-        <Icon type="qr" size={18} /> 真实二维码
+        <Icon type="qr" size={18} /> 扫码体验
       </div>
       <div className="mt-4 flex flex-col items-center">
         <img
@@ -207,7 +190,7 @@ function HomeQRCodeCard() {
           alt="明证 AI 手机演示二维码"
           className="h-44 w-44 rounded-2xl border border-slate-200 bg-white p-2 shadow-sm"
         />
-        <p className="mt-3 text-center text-sm font-bold text-slate-900">手机扫码直接打开 Demo</p>
+        <p className="mt-3 text-center text-sm font-bold text-slate-900">手机扫码打开 Demo</p>
         <p className="mt-1 break-all rounded-2xl bg-slate-50 p-3 text-center text-xs font-semibold text-blue-700">
           https://mingzheng-ai.vercel.app
         </p>
@@ -283,6 +266,18 @@ function DetailView({ post, onBack, onDelete, onSupport, comments, commentText, 
           <div className="mt-5 space-y-3 text-sm leading-6 text-slate-600">
             <p><b className="text-slate-900">求助说明：</b>{item.desc}</p>
             <p><b className="text-slate-900">审核状态：</b>{item.verified}</p>
+            <div className="rounded-2xl bg-slate-50 p-4">
+              <p className="font-bold text-slate-900">求助证据材料</p>
+              {item.evidenceFiles && item.evidenceFiles.length > 0 ? (
+                <div className="mt-2 space-y-2">
+                  {item.evidenceFiles.map((file, idx) => (
+                    <p key={idx} className="rounded-xl bg-white px-3 py-2 text-xs font-semibold text-slate-600">{idx + 1}. {file}</p>
+                  ))}
+                </div>
+              ) : (
+                <p className="mt-2 text-sm text-slate-400">暂无上传材料，建议补充证明文件提升可信度。</p>
+              )}
+            </div>
             <div className="h-3 overflow-hidden rounded-full bg-slate-100">
               <div className="h-3 rounded-full bg-blue-600" style={{ width: `${percent}%` }} />
             </div>
@@ -356,6 +351,7 @@ export default function App() {
   const [helpName, setHelpName] = useState("");
   const [helpTarget, setHelpTarget] = useState("");
   const [helpDesc, setHelpDesc] = useState("");
+  const [helpEvidenceFiles, setHelpEvidenceFiles] = useState([]);
   const [selectedPost, setSelectedPost] = useState(null);
   const [comments, setComments] = useState({});
   const [commentText, setCommentText] = useState("");
@@ -459,11 +455,31 @@ export default function App() {
   function submitHelp() {
     if (!isLoggedIn) return requireLogin();
     if (!helpName && !helpDesc) return alert("请填写求助信息");
+
+    const evidenceCount = helpEvidenceFiles.length;
+
     setHelps([
-      { id: Date.now(), name: helpName || "用户发起的求助", target: Number(helpTarget) || 10000, raised: 0, desc: helpDesc || "等待审核。", verified: "待审核", score: 60, isUserSubmitted: true, createdAt: new Date().toLocaleString() },
+      {
+        id: Date.now(),
+        name: helpName || "用户发起的求助",
+        target: Number(helpTarget) || 10000,
+        raised: 0,
+        desc: helpDesc || "等待审核。",
+        verified: evidenceCount > 0 ? "材料待核验" : "待审核",
+        score: evidenceCount > 0 ? Math.min(85, 60 + evidenceCount * 5) : 60,
+        evidenceFiles: helpEvidenceFiles.map(file => file.name),
+        evidence: evidenceCount > 0
+          ? [`用户上传了 ${evidenceCount} 份证明材料`, "等待平台或公益机构核验", "审核通过后可展示资金用途"]
+          : ["暂未上传证明材料", "等待补充医院/社区/学校/机构证明", "等待平台审核"],
+        isUserSubmitted: true,
+        createdAt: new Date().toLocaleString()
+      },
       ...helps,
     ]);
-    setHelpName(""); setHelpTarget(""); setHelpDesc("");
+    setHelpName("");
+    setHelpTarget("");
+    setHelpDesc("");
+    setHelpEvidenceFiles([]);
   }
 
   function support(i) {
@@ -575,6 +591,8 @@ export default function App() {
             </div>
           </div>
         )}
+
+
         <main className="space-y-4 p-4">
           {selectedPost && (
             <DetailView post={selectedPost} onBack={() => setSelectedPost(null)} onDelete={() => deleteUserPost(selectedPost.type, selectedPost.index)} onSupport={() => selectedPost.type === "help" && support(selectedPost.index)} comments={comments[getPostKey(selectedPost.type, selectedPost.item, selectedPost.index)] || []} commentText={commentText} commentType={commentType} onCommentInput={setCommentText} onCommentTypeInput={setCommentType} onAddComment={addComment} onDeleteComment={deleteComment} currentUserName={loginName || "当前用户"} isLoggedIn={isLoggedIn} requireLogin={requireLogin} />
@@ -648,6 +666,30 @@ export default function App() {
                   <input value={helpName} onChange={e => setHelpName(e.target.value)} placeholder="求助标题" className="mt-4 w-full rounded-2xl border border-slate-200 bg-slate-50 p-4 text-sm outline-none" />
                   <input value={helpTarget} onChange={e => setHelpTarget(e.target.value)} placeholder="目标金额，例如 80000" className="mt-3 w-full rounded-2xl border border-slate-200 bg-slate-50 p-4 text-sm outline-none" />
                   <textarea value={helpDesc} onChange={e => setHelpDesc(e.target.value)} placeholder="求助说明" className="mt-3 h-28 w-full rounded-2xl border border-slate-200 bg-slate-50 p-4 text-sm outline-none"></textarea>
+                  <div className="mt-4 rounded-2xl bg-emerald-50 p-4">
+                    <div className="flex items-center gap-2 text-sm font-black text-emerald-700">
+                      <Icon type="upload" size={18} /> 上传求助证据
+                    </div>
+                    <p className="mt-1 text-xs leading-5 text-emerald-600">
+                      可上传医院证明、费用清单、社区证明、受灾照片、身份/关系证明等材料。
+                    </p>
+                    <label className="mt-3 flex cursor-pointer items-center justify-center gap-2 rounded-2xl border-2 border-dashed border-emerald-200 bg-white p-5 text-sm font-bold text-emerald-700">
+                      <Icon type="upload" />选择证明材料
+                      <input type="file" multiple className="hidden" onChange={e => uploadFiles(e, setHelpEvidenceFiles)} />
+                    </label>
+                    <div className="mt-2 text-xs text-slate-500">
+                      已选择 {helpEvidenceFiles.length} 个文件
+                    </div>
+                    {helpEvidenceFiles.length > 0 && (
+                      <div className="mt-3 space-y-2">
+                        {helpEvidenceFiles.map((file, idx) => (
+                          <div key={idx} className="rounded-xl bg-white px-3 py-2 text-xs font-semibold text-slate-600">
+                            {idx + 1}. {file.name}
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
                   <button onClick={submitHelp} className="mt-4 w-full rounded-2xl bg-blue-600 py-3 font-bold text-white">{isLoggedIn ? "提交求助" : "登录后提交求助"}</button>
                 </Card>
                 {helps.map((h, i) => { const p = Math.min(100, Math.round(h.raised / h.target * 100)); return <button key={i} onClick={() => openPost("help", h, i)} className="block w-full text-left"><Card><div className="flex items-start justify-between gap-3"><Pill type={h.verified === "待审核" ? "amber" : "green"}>{h.verified}</Pill><Icon type="right" size={18} /></div><h3 className="mt-3 font-bold">{h.name}</h3><p className="mt-2 text-sm text-slate-500">{h.desc}</p><div className="mt-4 h-3 overflow-hidden rounded-full bg-slate-100"><div className="h-3 rounded-full bg-blue-600" style={{ width: `${p}%` }} /></div><div className="mt-2 flex justify-between text-sm text-slate-500"><span>¥{h.raised}</span><span>¥{h.target}</span></div><button onClick={(e) => { e.stopPropagation(); support(i); }} className="mt-4 w-full rounded-2xl bg-blue-600 py-3 font-bold text-white">模拟支持 +10 元</button>{h.isUserSubmitted && <button onClick={(e) => { e.stopPropagation(); deleteUserPost("help", i); }} className="mt-3 w-full rounded-2xl bg-rose-50 py-3 font-bold text-rose-600">删除我的提交</button>}</Card></button>; })}
