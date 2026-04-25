@@ -199,7 +199,7 @@ function HomeQRCodeCard() {
   );
 }
 
-function DetailView({ post, onBack, onDelete, onSupport, comments, commentText, commentType, onCommentInput, onCommentTypeInput, onAddComment, onDeleteComment, currentUserName, isLoggedIn, requireLogin }) {
+function DetailView({ post, onBack, onDelete, onSupport, onAdvanceReview, onAddTruthEvidence, truthEvidenceFiles, onTruthEvidenceFiles, truthEvidenceNote, onTruthEvidenceNote, comments, commentText, commentType, onCommentInput, onCommentTypeInput, onAddComment, onDeleteComment, currentUserName, isLoggedIn, requireLogin }) {
   const { type, item } = post;
   const isTruth = type === "truth";
   const isNotice = type === "notice";
@@ -225,6 +225,49 @@ function DetailView({ post, onBack, onDelete, onSupport, comments, commentText, 
 
         {isTruth && (
           <div className="mt-5 space-y-3 text-sm leading-6 text-slate-600">
+            <div className="rounded-2xl bg-blue-50 p-4">
+              <div className="flex items-center justify-between gap-3">
+                <div>
+                  <p className="font-bold text-slate-900">审核真伪流程</p>
+                  <p className="mt-1 text-xs text-slate-500">当前状态：{item.reviewStatus || "待核验"}</p>
+                </div>
+                <Pill type="blue">{item.result || "待核验"}</Pill>
+              </div>
+              <div className="mt-4 grid grid-cols-5 gap-1 text-center text-[10px] font-bold">
+                {["提交", "AI初筛", "补证", "复核", "发布"].map((step, idx) => (
+                  <div key={step} className={`rounded-xl px-1 py-2 ${idx <= (item.reviewStep || 1) ? "bg-blue-600 text-white" : "bg-white text-slate-400"}`}>
+                    {step}
+                  </div>
+                ))}
+              </div>
+              <button onClick={isLoggedIn ? onAdvanceReview : requireLogin} className="mt-4 w-full rounded-2xl bg-blue-600 py-3 font-bold text-white">
+                {isLoggedIn ? "推进一次审核流程" : "登录后推进审核"}
+              </button>
+            </div>
+
+            <div className="rounded-2xl bg-emerald-50 p-4">
+              <div className="flex items-center gap-2 text-sm font-black text-emerald-700">
+                <Icon type="upload" size={18} /> 附上证据
+              </div>
+              <p className="mt-1 text-xs leading-5 text-emerald-600">可上传截图、视频、原始链接截图、官方文件、现场照片等材料，辅助判断真伪。</p>
+              <textarea value={truthEvidenceNote} onChange={(e) => onTruthEvidenceNote(e.target.value)} placeholder="填写证据说明，例如：这张截图来自官方账号 2025-xx-xx 发布内容" className="mt-3 h-20 w-full rounded-2xl border border-emerald-100 bg-white p-3 text-sm outline-none"></textarea>
+              <label className="mt-3 flex cursor-pointer items-center justify-center gap-2 rounded-2xl border-2 border-dashed border-emerald-200 bg-white p-5 text-sm font-bold text-emerald-700">
+                <Icon type="upload" />选择证据材料
+                <input type="file" multiple className="hidden" onChange={e => isLoggedIn ? onTruthEvidenceFiles(Array.from(e.target.files || [])) : requireLogin()} />
+              </label>
+              <div className="mt-2 text-xs text-slate-500">已选择 {truthEvidenceFiles.length} 个文件</div>
+              {truthEvidenceFiles.length > 0 && (
+                <div className="mt-3 space-y-2">
+                  {truthEvidenceFiles.map((file, idx) => (
+                    <div key={idx} className="rounded-xl bg-white px-3 py-2 text-xs font-semibold text-slate-600">{idx + 1}. {file.name}</div>
+                  ))}
+                </div>
+              )}
+              <button onClick={isLoggedIn ? onAddTruthEvidence : requireLogin} className="mt-3 w-full rounded-2xl bg-emerald-600 py-3 font-bold text-white">
+                {isLoggedIn ? "提交补充证据" : "登录后提交证据"}
+              </button>
+            </div>
+
             <p><b className="text-slate-900">链接：</b>{item.link}</p>
             <p><b className="text-slate-900">上传文件数：</b>{item.files}</p>
             <p><b className="text-slate-900">核验状态：</b>{item.status}</p>
@@ -234,6 +277,14 @@ function DetailView({ post, onBack, onDelete, onSupport, comments, commentText, 
               <div className="mt-2 space-y-1">
                 {evidenceList.map((e, idx) => <p key={idx}>• {e}</p>)}
               </div>
+              {item.evidenceFiles && item.evidenceFiles.length > 0 && (
+                <div className="mt-3 space-y-2">
+                  <p className="font-bold text-slate-900">已上传证据文件</p>
+                  {item.evidenceFiles.map((file, idx) => (
+                    <p key={idx} className="rounded-xl bg-white px-3 py-2 text-xs font-semibold text-slate-600">{idx + 1}. {file}</p>
+                  ))}
+                </div>
+              )}
             </div>
             <div className="rounded-2xl bg-slate-50 p-4">
               <p className="font-bold text-slate-900">真实证据 / 辟谣来源</p>
@@ -337,9 +388,11 @@ export default function App() {
   const [truthText, setTruthText] = useState("");
   const [truthLink, setTruthLink] = useState("");
   const [truthFiles, setTruthFiles] = useState([]);
+  const [truthEvidenceFiles, setTruthEvidenceFiles] = useState([]);
+  const [truthEvidenceNote, setTruthEvidenceNote] = useState("");
   const [records, setRecords] = useState([
-    { text: "网传“某地出现罕见天价自然矿石，人人可去捡”", link: "示例：短视频/朋友圈截图", files: 0, status: "建议核验来源：地方警方、自然资源部门或中国互联网联合辟谣平台", result: "待核验", score: 42, evidence: ["仅有短视频传播截图", "暂未匹配到官方通报", "建议核验地方警方或自然资源部门信息"], evidenceLinks: [{ title: "中国互联网联合辟谣平台", url: "https://www.piyao.org.cn/", desc: "用于检索各地权威辟谣信息和官方回应。" }] },
-    { text: "网传食品添加剂等同于有毒物质", link: "示例：短视频标题", files: 0, status: "建议结合国家标准、剂量、适用范围判断，避免断章取义", result: "存在误导风险", score: 58, evidence: ["标题表达绝对化", "缺少剂量和适用标准", "需要对照食品安全国家标准"], evidenceLinks: [{ title: "食品安全与健康：巧辨谣言，科学饮食", url: "https://www.piyao.org.cn/20231215/7cea234c83a940cfb432d8cac6ae6745/c.html", desc: "中国互联网联合辟谣平台发布的食品安全科普和谣言辨析内容。" }] }
+    { text: "网传“某地出现罕见天价自然矿石，人人可去捡”", link: "示例：短视频/朋友圈截图", files: 0, status: "建议核验来源：地方警方、自然资源部门或中国互联网联合辟谣平台", result: "待核验", reviewStatus: "AI 初筛中", score: 42, evidence: ["仅有短视频传播截图", "暂未匹配到官方通报", "建议核验地方警方或自然资源部门信息"], evidenceLinks: [{ title: "中国互联网联合辟谣平台", url: "https://www.piyao.org.cn/", desc: "用于检索各地权威辟谣信息和官方回应。" }] },
+    { text: "网传食品添加剂等同于有毒物质", link: "示例：短视频标题", files: 0, status: "建议结合国家标准、剂量、适用范围判断，避免断章取义", result: "存在误导风险", reviewStatus: "人工复核中", score: 58, evidence: ["标题表达绝对化", "缺少剂量和适用标准", "需要对照食品安全国家标准"], evidenceLinks: [{ title: "食品安全与健康：巧辨谣言，科学饮食", url: "https://www.piyao.org.cn/20231215/7cea234c83a940cfb432d8cac6ae6745/c.html", desc: "中国互联网联合辟谣平台发布的食品安全科普和谣言辨析内容。" }] }
   ]);
   const [notices, setNotices] = useState(initNotices);
   const [noticeTitle, setNoticeTitle] = useState("");
@@ -404,10 +457,13 @@ export default function App() {
         text: truthText || "用户上传了待核验内容",
         link: truthLink || "无链接",
         files: truthFiles.length,
-        status: "待人工/专家核验",
+        status: "已进入审核流程：AI 初筛中",
+        reviewStatus: "AI 初筛中",
+        reviewStep: 1,
         result: truthLink ? "待核验" : "暂无定论",
         score: Math.min(85, 40 + truthFiles.length * 8 + (truthLink ? 15 : 0) + (truthText.length > 30 ? 10 : 0)),
-        evidence: [truthLink ? "用户提供了外部链接" : "未提供外部链接", truthFiles.length > 0 ? `用户上传了 ${truthFiles.length} 个文件` : "未上传文件", truthText.length > 30 ? "描述信息较完整" : "描述信息较少"],
+        evidence: [truthLink ? "用户提供了外部链接" : "未提供外部链接", truthFiles.length > 0 ? `用户上传了 ${truthFiles.length} 个原始文件` : "未上传原始文件", truthText.length > 30 ? "描述信息较完整" : "描述信息较少"],
+        evidenceFiles: truthFiles.map(file => file.name),
         evidenceLinks: truthLink ? [{ title: "用户提交链接", url: truthLink, desc: "用户提交的原始链接，需进一步人工核验。" }] : [],
         isUserSubmitted: true,
         createdAt: new Date().toLocaleString(),
@@ -415,6 +471,68 @@ export default function App() {
       ...records,
     ]);
     setTruthText(""); setTruthLink(""); setTruthFiles([]);
+  }
+
+  function advanceTruthReview() {
+    if (!selectedPost || selectedPost.type !== "truth") return;
+
+    const steps = ["待提交", "AI 初筛中", "证据补充中", "人工复核中", "结论已发布"];
+    const currentStep = selectedPost.item.reviewStep || 1;
+    const nextStep = Math.min(currentStep + 1, 4);
+    const nextStatus = steps[nextStep];
+
+    const nextResult =
+      nextStep >= 4
+        ? selectedPost.item.score >= 70
+          ? "倾向真实"
+          : selectedPost.item.score >= 50
+            ? "需要更多证据"
+            : "存在误导风险"
+        : selectedPost.item.result || "待核验";
+
+    const updatedItem = {
+      ...selectedPost.item,
+      reviewStep: nextStep,
+      reviewStatus: nextStatus,
+      status: `审核流程：${nextStatus}`,
+      result: nextResult,
+      score: Math.min(96, (selectedPost.item.score || 50) + 6),
+    };
+
+    setRecords(records.map((item, idx) => idx === selectedPost.index ? updatedItem : item));
+    setSelectedPost({ ...selectedPost, item: updatedItem });
+  }
+
+  function addTruthEvidence() {
+    if (!isLoggedIn) return requireLogin();
+    if (!selectedPost || selectedPost.type !== "truth") return;
+    if (truthEvidenceFiles.length === 0 && !truthEvidenceNote.trim()) return alert("请先上传证据或填写证据说明");
+
+    const newEvidenceTexts = [
+      ...(selectedPost.item.evidence || []),
+      truthEvidenceNote.trim() ? `补充说明：${truthEvidenceNote.trim()}` : null,
+      truthEvidenceFiles.length > 0 ? `补充上传了 ${truthEvidenceFiles.length} 份证据材料` : null,
+    ].filter(Boolean);
+
+    const newEvidenceFiles = [
+      ...(selectedPost.item.evidenceFiles || []),
+      ...truthEvidenceFiles.map(file => file.name),
+    ];
+
+    const updatedItem = {
+      ...selectedPost.item,
+      evidence: newEvidenceTexts,
+      evidenceFiles: newEvidenceFiles,
+      reviewStep: Math.max(selectedPost.item.reviewStep || 1, 2),
+      reviewStatus: "证据补充中",
+      status: "审核流程：证据补充中",
+      score: Math.min(96, (selectedPost.item.score || 50) + truthEvidenceFiles.length * 5 + (truthEvidenceNote.trim() ? 5 : 0)),
+    };
+
+    setRecords(records.map((item, idx) => idx === selectedPost.index ? updatedItem : item));
+    setSelectedPost({ ...selectedPost, item: updatedItem });
+    setTruthEvidenceFiles([]);
+    setTruthEvidenceNote("");
   }
 
   function submitNotice() {
@@ -595,7 +713,7 @@ export default function App() {
 
         <main className="space-y-4 p-4">
           {selectedPost && (
-            <DetailView post={selectedPost} onBack={() => setSelectedPost(null)} onDelete={() => deleteUserPost(selectedPost.type, selectedPost.index)} onSupport={() => selectedPost.type === "help" && support(selectedPost.index)} comments={comments[getPostKey(selectedPost.type, selectedPost.item, selectedPost.index)] || []} commentText={commentText} commentType={commentType} onCommentInput={setCommentText} onCommentTypeInput={setCommentType} onAddComment={addComment} onDeleteComment={deleteComment} currentUserName={loginName || "当前用户"} isLoggedIn={isLoggedIn} requireLogin={requireLogin} />
+            <DetailView post={selectedPost} onBack={() => setSelectedPost(null)} onDelete={() => deleteUserPost(selectedPost.type, selectedPost.index)} onSupport={() => selectedPost.type === "help" && support(selectedPost.index)} onAdvanceReview={advanceTruthReview} onAddTruthEvidence={addTruthEvidence} truthEvidenceFiles={truthEvidenceFiles} onTruthEvidenceFiles={setTruthEvidenceFiles} truthEvidenceNote={truthEvidenceNote} onTruthEvidenceNote={setTruthEvidenceNote} comments={comments[getPostKey(selectedPost.type, selectedPost.item, selectedPost.index)] || []} commentText={commentText} commentType={commentType} onCommentInput={setCommentText} onCommentTypeInput={setCommentType} onAddComment={addComment} onDeleteComment={deleteComment} currentUserName={loginName || "当前用户"} isLoggedIn={isLoggedIn} requireLogin={requireLogin} />
           )}
 
           {!selectedPost && (
