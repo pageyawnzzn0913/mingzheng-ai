@@ -13,6 +13,8 @@ function Icon({ type, size = 22 }) {
     right: <><path d="m9 18 6-6-6-6"/></>,
     flame: <><path d="M8.5 14.5A4.5 4.5 0 0 0 17 12c0-3.5-3-5.5-4-9-2 2-2.5 4-1.5 6-1.6-.5-2.8-1.7-3.5-3-1.5 2-2 3.6-2 5.5a4.5 4.5 0 0 0 2.5 4Z"/><path d="M12 22a4 4 0 0 0 4-4c0-1.5-.7-2.7-2-4 .2 2-1.4 3-2 3s-2.2-1-2-3c-1.3 1.3-2 2.5-2 4a4 4 0 0 0 4 4Z"/></>,
     link: <><path d="M10 13a5 5 0 0 0 7.1 0l2-2a5 5 0 0 0-7.1-7.1l-1.1 1.1"/><path d="M14 11a5 5 0 0 0-7.1 0l-2 2a5 5 0 0 0 7.1 7.1l1.1-1.1"/></>,
+    spark: <><path d="M12 3l1.7 5.2L19 10l-5.3 1.8L12 17l-1.7-5.2L5 10l5.3-1.8L12 3Z"/><path d="M19 15l.8 2.2L22 18l-2.2.8L19 21l-.8-2.2L16 18l2.2-.8L19 15Z"/></>,
+    qr: <><path d="M3 3h7v7H3z"/><path d="M14 3h7v7h-7z"/><path d="M3 14h7v7H3z"/><path d="M14 14h2"/><path d="M19 14h2"/><path d="M14 17h7"/><path d="M14 21h3"/><path d="M20 21h1"/></>,
   };
   return <svg {...common}>{paths[type] || paths.home}</svg>;
 }
@@ -151,7 +153,43 @@ function EvidenceBox({ links = [] }) {
   );
 }
 
-function DetailView({ post, onBack, onDelete, onSupport, comments, commentText, commentType, onCommentInput, onCommentTypeInput, onAddComment, isLoggedIn, requireLogin }) {
+
+function AIEnhanceCard({ onStart }) {
+  return (
+    <Card>
+      <div className="flex items-center gap-2">
+        <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-blue-600 text-white"><Icon type="spark" size={20} /></div>
+        <div>
+          <h2 className="text-lg font-black">AI 核验引擎</h2>
+          <p className="text-xs text-slate-500">模拟多源检索、证据链评分、风险提示</p>
+        </div>
+      </div>
+      <div className="mt-4 grid grid-cols-3 gap-2 text-center text-xs">
+        <div className="rounded-2xl bg-slate-50 p-3"><b className="block text-lg text-slate-900">3s</b>生成结论</div>
+        <div className="rounded-2xl bg-slate-50 p-3"><b className="block text-lg text-slate-900">5类</b>权威来源</div>
+        <div className="rounded-2xl bg-slate-50 p-3"><b className="block text-lg text-slate-900">96%</b>最高可信</div>
+      </div>
+      <button onClick={onStart} className="mt-4 w-full rounded-2xl bg-blue-600 py-3 font-bold text-white">演示 AI 自动核验</button>
+    </Card>
+  );
+}
+
+function QRDemoCard() {
+  return (
+    <Card>
+      <div className="flex items-start gap-3">
+        <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-slate-900 text-white"><Icon type="qr" size={20} /></div>
+        <div>
+          <h2 className="font-black">扫码即用</h2>
+          <p className="mt-1 text-sm leading-6 text-slate-500">比赛现场可把 Vercel / 国内托管链接生成二维码，评委手机扫码直接体验。</p>
+          <p className="mt-2 rounded-2xl bg-slate-50 p-3 text-xs font-semibold text-blue-700">https://mingzheng-ai.vercel.app</p>
+        </div>
+      </div>
+    </Card>
+  );
+}
+
+function DetailView({ post, onBack, onDelete, onSupport, comments, commentText, commentType, onCommentInput, onCommentTypeInput, onAddComment, onDeleteComment, currentUserName, isLoggedIn, requireLogin }) {
   const { type, item } = post;
   const isTruth = type === "truth";
   const isNotice = type === "notice";
@@ -233,7 +271,20 @@ function DetailView({ post, onBack, onDelete, onSupport, comments, commentText, 
             {comments.some(c => c.type === "核验评论") && <p className="rounded-2xl bg-emerald-50 p-3 text-sm font-bold text-emerald-700">已有核验评论，可作为可信度参考。</p>}
             {comments.map((c, idx) => (
               <div key={idx} className="rounded-2xl bg-white p-3 text-sm text-slate-600">
-                <div className="flex items-center justify-between gap-2"><div className="font-bold text-slate-900">{c.user}</div>{c.role && <UserBadge role={c.role} />}</div>
+                <div className="flex items-center justify-between gap-2">
+                  <div className="flex items-center gap-2">
+                    <div className="font-bold text-slate-900">{c.user}</div>
+                    {c.role && <UserBadge role={c.role} />}
+                  </div>
+                  {isLoggedIn && c.user === currentUserName && (
+                    <button
+                      onClick={() => onDeleteComment(idx)}
+                      className="rounded-full bg-rose-50 px-3 py-1 text-xs font-bold text-rose-600"
+                    >
+                      删除
+                    </button>
+                  )}
+                </div>
                 <div className="mt-1">{c.type === "核验评论" && <span className="mr-2 rounded-full bg-emerald-50 px-2 py-0.5 text-xs font-bold text-emerald-700">核验评论</span>}{c.text}</div>
                 <div className="mt-1 text-xs text-slate-400">{c.time}</div>
               </div>
@@ -286,6 +337,7 @@ export default function App() {
   const [loginError, setLoginError] = useState("");
   const [userRole, setUserRole] = useState("普通用户");
   const [commentType, setCommentType] = useState("普通评论");
+  const [aiDemo, setAiDemo] = useState(false);
 
   const uploadFiles = (e, setter) => {
     if (!isLoggedIn) {
@@ -394,6 +446,20 @@ export default function App() {
     setCommentText("");
   }
 
+  function deleteComment(index) {
+    if (!selectedPost) return;
+    if (!confirm("确定删除这条评论吗？")) return;
+
+    const key = getPostKey(selectedPost.type, selectedPost.item, selectedPost.index);
+    const updated = [...(comments[key] || [])];
+    updated.splice(index, 1);
+
+    setComments({
+      ...comments,
+      [key]: updated,
+    });
+  }
+
   function deleteUserPost(type, index) {
     if (!isLoggedIn) return requireLogin();
     if (!confirm("确定删除这条自己提交的内容吗？")) return;
@@ -422,7 +488,7 @@ export default function App() {
               <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-blue-600 text-white"><Icon type="shield" /></div>
               <div>
                 <div className="text-lg font-black">明证 AI</div>
-                <div className="text-xs text-slate-500">手机版交互 Demo</div>
+                <div className="text-xs text-slate-500">黑客松强化 Demo</div>
               </div>
             </div>
             <button onClick={isLoggedIn ? logout : () => setShowLogin(true)} className={`rounded-full px-3 py-1 text-xs font-bold ${isLoggedIn ? "bg-emerald-50 text-emerald-700" : "bg-blue-50 text-blue-700"}`}>{isLoggedIn ? `${loginName} · 退出` : "登录"}</button>
@@ -447,9 +513,29 @@ export default function App() {
           </div>
         )}
 
+        {aiDemo && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 px-6">
+            <div className="w-full max-w-[360px] rounded-[30px] bg-white p-5 shadow-xl">
+              <div className="flex items-center gap-3">
+                <div className="flex h-12 w-12 animate-pulse items-center justify-center rounded-2xl bg-blue-600 text-white"><Icon type="spark" /></div>
+                <div>
+                  <h2 className="text-xl font-black">AI 核验完成</h2>
+                  <p className="text-sm text-slate-500">已生成可解释证据链</p>
+                </div>
+              </div>
+              <div className="mt-5 space-y-3 text-sm">
+                <div className="rounded-2xl bg-blue-50 p-4"><b className="text-blue-700">1. 传播源识别：</b>检测到短视频/截图类信息，需重点核验原始出处。</div>
+                <div className="rounded-2xl bg-emerald-50 p-4"><b className="text-emerald-700">2. 权威源比对：</b>优先匹配政府网站、应急管理、市场监管、联合辟谣平台。</div>
+                <div className="rounded-2xl bg-amber-50 p-4"><b className="text-amber-700">3. 风险提示：</b>标题绝对化、缺少时间地点、无官方来源时降低可信度。</div>
+              </div>
+              <button onClick={() => { setAiDemo(false); setTab("truth"); }} className="mt-5 w-full rounded-2xl bg-blue-600 py-3 font-bold text-white">去体验求真流程</button>
+            </div>
+          </div>
+        )}
+
         <main className="space-y-4 p-4">
           {selectedPost && (
-            <DetailView post={selectedPost} onBack={() => setSelectedPost(null)} onDelete={() => deleteUserPost(selectedPost.type, selectedPost.index)} onSupport={() => selectedPost.type === "help" && support(selectedPost.index)} comments={comments[getPostKey(selectedPost.type, selectedPost.item, selectedPost.index)] || []} commentText={commentText} commentType={commentType} onCommentInput={setCommentText} onCommentTypeInput={setCommentType} onAddComment={addComment} isLoggedIn={isLoggedIn} requireLogin={requireLogin} />
+            <DetailView post={selectedPost} onBack={() => setSelectedPost(null)} onDelete={() => deleteUserPost(selectedPost.type, selectedPost.index)} onSupport={() => selectedPost.type === "help" && support(selectedPost.index)} comments={comments[getPostKey(selectedPost.type, selectedPost.item, selectedPost.index)] || []} commentText={commentText} commentType={commentType} onCommentInput={setCommentText} onCommentTypeInput={setCommentType} onAddComment={addComment} onDeleteComment={deleteComment} currentUserName={loginName || "当前用户"} isLoggedIn={isLoggedIn} requireLogin={requireLogin} />
           )}
 
           {!selectedPost && (
@@ -461,6 +547,8 @@ export default function App() {
                   <p className="mt-2 text-sm leading-6 text-slate-300">求真核验、官方通报、可信求助，全部在手机端完成交互演示。</p>
                   <button onClick={() => setTab("truth")} className="mt-5 w-full rounded-2xl bg-white py-3 font-bold text-slate-900">立即上传求真</button>
                 </Card>
+                <AIEnhanceCard onStart={() => setAiDemo(true)} />
+                <QRDemoCard />
                 <div className="grid grid-cols-3 gap-3">
                   <Card><div className="text-2xl font-black">{records.length}</div><div className="text-xs text-slate-500">求真帖子</div></Card>
                   <Card><div className="text-2xl font-black">{notices.length}</div><div className="text-xs text-slate-500">通报帖子</div></Card>
