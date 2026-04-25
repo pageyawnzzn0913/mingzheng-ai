@@ -174,18 +174,21 @@ function AIEnhanceCard({ onStart }) {
   );
 }
 
-function QRDemoCard() {
+function QRDemoCard({ onOpen }) {
   return (
-    <Card>
-      <div className="flex items-start gap-3">
-        <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-slate-900 text-white"><Icon type="qr" size={20} /></div>
-        <div>
-          <h2 className="font-black">扫码即用</h2>
-          <p className="mt-1 text-sm leading-6 text-slate-500">比赛现场可把 Vercel / 国内托管链接生成二维码，评委手机扫码直接体验。</p>
-          <p className="mt-2 rounded-2xl bg-slate-50 p-3 text-xs font-semibold text-blue-700">https://mingzheng-ai.vercel.app</p>
+    <button onClick={onOpen} className="block w-full text-left">
+      <Card>
+        <div className="flex items-start gap-3">
+          <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-slate-900 text-white"><Icon type="qr" size={20} /></div>
+          <div>
+            <h2 className="font-black">扫码即用</h2>
+            <p className="mt-1 text-sm leading-6 text-slate-500">点击查看演示入口，比赛现场评委手机扫码/复制链接即可体验。</p>
+            <p className="mt-2 rounded-2xl bg-slate-50 p-3 text-xs font-semibold text-blue-700">https://mingzheng-ai.vercel.app</p>
+          </div>
         </div>
-      </div>
-    </Card>
+        <div className="mt-4 rounded-2xl bg-slate-900 py-3 text-center text-sm font-bold text-white">打开二维码 / 链接</div>
+      </Card>
+    </button>
   );
 }
 
@@ -322,6 +325,9 @@ export default function App() {
   const [notices, setNotices] = useState(initNotices);
   const [noticeTitle, setNoticeTitle] = useState("");
   const [noticeSummary, setNoticeSummary] = useState("");
+  const [noticeSourceTitle, setNoticeSourceTitle] = useState("");
+  const [noticeSourceUrl, setNoticeSourceUrl] = useState("");
+  const [noticeSourceDesc, setNoticeSourceDesc] = useState("");
   const [helps, setHelps] = useState(initHelps);
   const [helpName, setHelpName] = useState("");
   const [helpTarget, setHelpTarget] = useState("");
@@ -338,6 +344,7 @@ export default function App() {
   const [userRole, setUserRole] = useState("普通用户");
   const [commentType, setCommentType] = useState("普通评论");
   const [aiDemo, setAiDemo] = useState(false);
+  const [showQR, setShowQR] = useState(false);
 
   const uploadFiles = (e, setter) => {
     if (!isLoggedIn) {
@@ -394,23 +401,36 @@ export default function App() {
   function submitNotice() {
     if (!isLoggedIn) return requireLogin();
     if (!noticeTitle && !noticeSummary) return alert("请填写通报内容");
+
+    const hasTrustedSource = noticeSourceUrl.trim() || noticeSourceTitle.trim() || noticeSourceDesc.trim();
+
     setNotices([
       {
         id: Date.now(),
         title: noticeTitle || "用户上传的官方通报材料",
-        tag: "用户上传",
+        tag: hasTrustedSource ? "用户上传 · 含可信来源" : "用户上传",
         summary: noticeSummary || "等待补充事件经过。",
-        source: "用户上传材料",
-        result: "待整理",
-        score: 65,
-        timeline: ["用户提交材料", "等待整理", "等待核验", "形成结果"],
-        evidenceLinks: [],
+        source: noticeSourceTitle || "用户上传材料",
+        result: hasTrustedSource ? "待核验来源" : "待整理",
+        score: hasTrustedSource ? 78 : 65,
+        timeline: ["用户提交材料", hasTrustedSource ? "已补充可信来源" : "等待补充来源", "等待核验", "形成结果"],
+        evidenceLinks: hasTrustedSource ? [
+          {
+            title: noticeSourceTitle || "用户补充的可信来源",
+            url: noticeSourceUrl || "https://www.gov.cn/",
+            desc: noticeSourceDesc || "用户补充的官方通报、权威媒体、政府网站或机构公告链接。"
+          }
+        ] : [],
         isUserSubmitted: true,
         createdAt: new Date().toLocaleString(),
       },
       ...notices,
     ]);
-    setNoticeTitle(""); setNoticeSummary("");
+    setNoticeTitle("");
+    setNoticeSummary("");
+    setNoticeSourceTitle("");
+    setNoticeSourceUrl("");
+    setNoticeSourceDesc("");
   }
 
   function submitHelp() {
@@ -533,6 +553,50 @@ export default function App() {
           </div>
         )}
 
+        {showQR && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 px-6">
+            <div className="w-full max-w-[360px] rounded-[30px] bg-white p-5 shadow-xl">
+              <div className="flex items-center gap-3">
+                <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-slate-900 text-white"><Icon type="qr" /></div>
+                <div>
+                  <h2 className="text-xl font-black">扫码即用</h2>
+                  <p className="text-sm text-slate-500">手机打开这个链接即可体验 Demo</p>
+                </div>
+              </div>
+
+              <div className="mt-5 rounded-[24px] bg-slate-50 p-4 text-center">
+                <div className="mx-auto grid h-44 w-44 grid-cols-5 gap-1 rounded-2xl bg-white p-3 shadow-sm">
+                  {Array.from({ length: 25 }).map((_, i) => (
+                    <div
+                      key={i}
+                      className={`rounded-sm ${
+                        [0,1,2,5,7,10,11,12,4,9,14,20,21,22,15,17,24,3,8,13,18,23].includes(i)
+                          ? "bg-slate-900"
+                          : "bg-slate-200"
+                      }`}
+                    />
+                  ))}
+                </div>
+                <p className="mt-3 text-xs text-slate-400">演示二维码占位图：正式比赛请使用你已生成的二维码图片。</p>
+              </div>
+
+              <div className="mt-4 rounded-2xl bg-blue-50 p-3 text-xs font-bold text-blue-700 break-all">
+                https://mingzheng-ai.vercel.app
+              </div>
+
+              <a
+                href="https://mingzheng-ai.vercel.app"
+                target="_blank"
+                rel="noreferrer"
+                className="mt-4 block w-full rounded-2xl bg-blue-600 py-3 text-center font-bold text-white"
+              >
+                打开演示链接
+              </a>
+              <button onClick={() => setShowQR(false)} className="mt-2 w-full rounded-2xl bg-slate-100 py-3 font-bold text-slate-600">关闭</button>
+            </div>
+          </div>
+        )}
+
         <main className="space-y-4 p-4">
           {selectedPost && (
             <DetailView post={selectedPost} onBack={() => setSelectedPost(null)} onDelete={() => deleteUserPost(selectedPost.type, selectedPost.index)} onSupport={() => selectedPost.type === "help" && support(selectedPost.index)} comments={comments[getPostKey(selectedPost.type, selectedPost.item, selectedPost.index)] || []} commentText={commentText} commentType={commentType} onCommentInput={setCommentText} onCommentTypeInput={setCommentType} onAddComment={addComment} onDeleteComment={deleteComment} currentUserName={loginName || "当前用户"} isLoggedIn={isLoggedIn} requireLogin={requireLogin} />
@@ -548,7 +612,7 @@ export default function App() {
                   <button onClick={() => setTab("truth")} className="mt-5 w-full rounded-2xl bg-white py-3 font-bold text-slate-900">立即上传求真</button>
                 </Card>
                 <AIEnhanceCard onStart={() => setAiDemo(true)} />
-                <QRDemoCard />
+                <QRDemoCard onOpen={() => setShowQR(true)} />
                 <div className="grid grid-cols-3 gap-3">
                   <Card><div className="text-2xl font-black">{records.length}</div><div className="text-xs text-slate-500">求真帖子</div></Card>
                   <Card><div className="text-2xl font-black">{notices.length}</div><div className="text-xs text-slate-500">通报帖子</div></Card>
@@ -586,6 +650,15 @@ export default function App() {
                   <h2 className="text-xl font-black">录入官方通报</h2>
                   <input value={noticeTitle} onChange={e => setNoticeTitle(e.target.value)} placeholder="事件标题" className="mt-4 w-full rounded-2xl border border-slate-200 bg-slate-50 p-4 text-sm outline-none" />
                   <textarea value={noticeSummary} onChange={e => setNoticeSummary(e.target.value)} placeholder="事件摘要 / 官方处理结果" className="mt-3 h-28 w-full rounded-2xl border border-slate-200 bg-slate-50 p-4 text-sm outline-none"></textarea>
+                  <div className="mt-4 rounded-2xl bg-blue-50 p-4">
+                    <div className="flex items-center gap-2 text-sm font-black text-blue-700">
+                      <Icon type="link" size={18} /> 增加可信来源
+                    </div>
+                    <p className="mt-1 text-xs leading-5 text-blue-600">可填写政府网站、权威媒体、应急管理、市场监管、学校/医院/机构公告等来源。</p>
+                    <input value={noticeSourceTitle} onChange={e => setNoticeSourceTitle(e.target.value)} placeholder="来源名称，例如：应急管理部通报 / 中国政府网" className="mt-3 w-full rounded-2xl border border-blue-100 bg-white p-3 text-sm outline-none" />
+                    <input value={noticeSourceUrl} onChange={e => setNoticeSourceUrl(e.target.value)} placeholder="可信来源链接，例如 https://..." className="mt-3 w-full rounded-2xl border border-blue-100 bg-white p-3 text-sm outline-none" />
+                    <textarea value={noticeSourceDesc} onChange={e => setNoticeSourceDesc(e.target.value)} placeholder="来源说明，例如：官方发布的事故调查报告，包含原因认定和处理结果" className="mt-3 h-20 w-full rounded-2xl border border-blue-100 bg-white p-3 text-sm outline-none"></textarea>
+                  </div>
                   <button onClick={submitNotice} className="mt-4 w-full rounded-2xl bg-blue-600 py-3 font-bold text-white">{isLoggedIn ? "添加通报" : "登录后添加通报"}</button>
                 </Card>
                 {notices.map((n, i) => <button key={i} onClick={() => openPost("notice", n, i)} className="block w-full text-left"><Card><div className="flex items-start justify-between gap-3"><Pill type={n.tag === "用户上传" ? "amber" : "green"}>{n.tag}</Pill><Icon type="right" size={18} /></div><h3 className="mt-3 font-bold">{n.title}</h3><p className="mt-2 text-sm text-slate-500">{n.summary}</p><p className="mt-3 text-xs font-semibold text-blue-700">来源：{n.source || "用户上传材料"}</p>{n.isUserSubmitted && <button onClick={(e) => { e.stopPropagation(); deleteUserPost("notice", i); }} className="mt-3 rounded-xl bg-rose-50 px-3 py-2 text-xs font-bold text-rose-600">删除我的提交</button>}</Card></button>)}
