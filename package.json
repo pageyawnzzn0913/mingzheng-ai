@@ -9,7 +9,7 @@
     "vite": "latest",
     "react": "latest",
     "react-dom": "latest",
-    "tailwindcss": "latest",
+    "tailwindcss": "3.4.17",
     "postcss": "latest",
     "autoprefixer": "latest"
   },
